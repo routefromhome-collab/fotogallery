@@ -205,7 +205,7 @@ def upload():
     file = request.files.get("file")
 
     if not file:
-        return redirect("/")
+        return jsonify({"error": "no file"}), 400
 
     try:
         res = requests.post(
@@ -215,26 +215,21 @@ def upload():
             timeout=15
         ).json()
 
-        # 🔥 сначала проверка
         if not res.get("ok"):
-            print("Telegram error:", res)
-            return f"Ошибка Telegram: {res.get('description')}", 500
+            return jsonify({"error": res.get("description")}), 500
 
-        result = res.get("result")
-
-        # 🔥 правильный доступ
-        if not result or "document" not in result:
-            return "Telegram не вернул document", 500
-
-        file_id = result["document"]["file_id"]
+        file_id = res["result"]["document"]["file_id"]
 
         insert_photo(file.filename, file_id, current_user.id)
 
-    except Exception as e:
-        print("Upload error:", e)
-        return "Ошибка загрузки", 500
+        return jsonify({
+            "status": "ok",
+            "name": file.filename
+        })
 
-    return redirect("/")
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "upload failed"}), 500
 
 # ===== KEEP ALIVE =====
 @app.route("/ping")
