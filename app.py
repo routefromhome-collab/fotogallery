@@ -209,24 +209,24 @@ def upload():
 
     try:
         res = requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument",
-        data={"chat_id": CHANNEL_ID},
-        files={"document": file},
-        timeout=15
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument",
+            data={"chat_id": CHANNEL_ID},
+            files={"document": file},
+            timeout=15
         ).json()
 
-        file_id = res["result"]["document"]["file_id"]
-
-        # 🔥 проверка ответа
+        # 🔥 сначала проверка
         if not res.get("ok"):
             print("Telegram error:", res)
             return f"Ошибка Telegram: {res.get('description')}", 500
 
         result = res.get("result")
-        if not result or "photo" not in result:
-            return "Telegram не вернул файл", 500
 
-        file_id = result["photo"][-1]["file_id"]
+        # 🔥 правильный доступ
+        if not result or "document" not in result:
+            return "Telegram не вернул document", 500
+
+        file_id = result["document"]["file_id"]
 
         insert_photo(file.filename, file_id, current_user.id)
 
