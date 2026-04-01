@@ -3,6 +3,13 @@ body {
     font-family: Arial, sans-serif;
     background:#f0f0f0;
 }
+.user-badge {
+    background:#333;
+    padding:5px 10px;
+    border-radius:8px;
+    color:#fff;
+    font-size:14px;
+}
 .header {
     display:flex;
     justify-content:space-between;

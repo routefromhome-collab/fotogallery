@@ -3,13 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Telegram Gallery</title>
+<title>Gallery</title>
 <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
 <div class="header">
-  <h1>📸 Telegram Gallery</h1>
-  <a href="/logout">Выйти</a>
+  <h1>📸 Gallery</h1>
+ <div style="display:flex; gap:15px; align-items:center;">
+    <span class="user-badge">
+      👤 {{ username }}
+    </span>
+    <a href="/logout">Выйти</a>
+  </div>
 </div>
 
 <div class="upload-box">

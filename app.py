@@ -155,22 +155,38 @@ def images():
 @app.route("/image")
 @login_required
 def image():
-    file_id = get_file_id(request.args.get("name"), current_user.id)
+    name = request.args.get("name")
+    file_id = get_file_id(name, current_user.id)
+
     if not file_id:
-        return "Нет доступа", 404
+        return "Нет доступа или файл не найден", 404
 
-    res = requests.get(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
-        params={"file_id": file_id}
-    ).json()
+    try:
+        res = requests.get(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
+            params={"file_id": file_id},
+            timeout=10
+        ).json()
 
-    file_path = res["result"]["file_path"]
-    file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+        # 🔥 безопасно достаём
+        file_path = res.get("result", {}).get("file_path")
+
+        if not file_path:
+            return "Файл не найден в Telegram", 404
+
+        file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+
+    except Exception as e:
+        print("Telegram error:", e)
+        return "Ошибка Telegram", 500
 
     def generate():
-        with requests.get(file_url, stream=True) as r:
-            for chunk in r.iter_content(4096):
-                yield chunk
+        try:
+            with requests.get(file_url, stream=True) as r:
+                for chunk in r.iter_content(4096):
+                    yield chunk
+        except Exception as e:
+            print("Stream error:", e)
 
     return Response(generate(), content_type="image/jpeg")
 
