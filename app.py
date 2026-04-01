@@ -45,11 +45,13 @@ def init_db():
     conn.close()
 
 def insert_photo(name, file_id):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO photos (name, file_id) VALUES (?, ?)", (name, file_id))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO photos (name, file_id) VALUES (?, ?)", (name, file_id))
+        conn.commit()
+    finally:
+        conn.close()
 
 def get_all_photos():
     conn = sqlite3.connect(DB_FILE)
@@ -87,7 +89,7 @@ def login():
     if username in users and users[username]["password"] == password:
         login_user(User(username))
         return redirect("/")
-    return "Ошибка входа"
+    return render_template("login.html", error="Неверный логин или пароль")
 
 @app.route("/logout")
 @login_required
@@ -107,33 +109,41 @@ def image():
     name = request.args.get("name")
     file_id = get_file_id(name)
     if not file_id:
-        return "Not found", 404
-
-    res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
-                       params={"file_id": file_id}).json()
-    file_path = res["result"]["file_path"]
-    file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+        return "Фото не найдено", 404
+    try:
+        res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
+                           params={"file_id": file_id}, timeout=10).json()
+        file_path = res["result"]["file_path"]
+        file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+    except Exception:
+        return "Ошибка при получении файла", 500
 
     def generate():
-        with requests.get(file_url, stream=True) as r:
-            for chunk in r.iter_content(4096):
-                yield chunk
-
+        try:
+            with requests.get(file_url, stream=True) as r:
+                for chunk in r.iter_content(4096):
+                    yield chunk
+        except Exception:
+            return
     return Response(generate(), content_type="image/jpeg")
 
 @app.route("/upload", methods=["POST"])
 @login_required
 def upload():
     file = request.files["file"]
+    if not file:
+        return redirect("/")
     name = file.filename
 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-    files = {"photo": file}
-    data = {"chat_id": CHANNEL_ID}
-    res = requests.post(url, data=data, files=files).json()
-
-    file_id = res["result"]["photo"][-1]["file_id"]
-    insert_photo(name, file_id)
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+        files = {"photo": file}
+        data = {"chat_id": CHANNEL_ID}
+        res = requests.post(url, data=data, files=files, timeout=15).json()
+        file_id = res["result"]["photo"][-1]["file_id"]
+        insert_photo(name, file_id)
+    except Exception:
+        return "Ошибка при загрузке на Telegram", 500
 
     return redirect("/")
 
