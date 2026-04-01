@@ -1,13 +1,117 @@
-<form action="/login" method="post">
-    <input type="text" name="username" placeholder="Логин" required>
-    <input type="password" name="password" placeholder="Пароль" required>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вход</title>
+
+<style>
+body {
+    margin:0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.container {
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    width:320px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+}
+
+h2 {
+    text-align:center;
+    margin-bottom:20px;
+}
+
+input {
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+}
+
+button {
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border:none;
+    border-radius:8px;
+    background:#667eea;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+button:hover {
+    background:#5a67d8;
+}
+
+.error {
+    color:red;
+    text-align:center;
+    margin-bottom:10px;
+}
+
+.switch {
+    text-align:center;
+    margin-top:10px;
+    cursor:pointer;
+    color:#666;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2 id="title">Вход</h2>
+
+{% if error %}
+<div class="error">{{ error }}</div>
+{% endif %}
+
+<form id="loginForm" action="/login" method="post">
+    <input name="username" placeholder="Логин" required>
+    <input name="password" type="password" placeholder="Пароль" required>
     <button>Войти</button>
 </form>
 
-<hr>
-
-<form action="/register" method="post">
-    <input type="text" name="username" placeholder="Новый логин" required>
-    <input type="password" name="password" placeholder="Новый пароль" required>
-    <button>Регистрация</button>
+<form id="registerForm" action="/register" method="post" style="display:none;">
+    <input name="username" placeholder="Новый логин" required>
+    <input name="password" type="password" placeholder="Пароль" required>
+    <button>Создать аккаунт</button>
 </form>
+
+<div class="switch" onclick="toggle()">
+    Нет аккаунта? Зарегистрироваться
+</div>
+
+</div>
+
+<script>
+let isLogin = true;
+
+function toggle() {
+    isLogin = !isLogin;
+
+    document.getElementById("loginForm").style.display = isLogin ? "block" : "none";
+    document.getElementById("registerForm").style.display = isLogin ? "none" : "block";
+
+    document.getElementById("title").innerText = isLogin ? "Вход" : "Регистрация";
+
+    document.querySelector(".switch").innerText =
+        isLogin ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти";
+}
+</script>
+
+</body>
+</html>
