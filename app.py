@@ -203,17 +203,36 @@ def image():
 @login_required
 def upload():
     file = request.files.get("file")
+
     if not file:
         return redirect("/")
 
-    res = requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto",
+    try:
+        res = requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument",
         data={"chat_id": CHANNEL_ID},
-        files={"photo": file}
-    ).json()
+        files={"document": file},
+        timeout=15
+        ).json()
 
-    file_id = res["result"]["photo"][-1]["file_id"]
-    insert_photo(file.filename, file_id, current_user.id)
+        file_id = res["result"]["document"]["file_id"]
+
+        # 🔥 проверка ответа
+        if not res.get("ok"):
+            print("Telegram error:", res)
+            return f"Ошибка Telegram: {res.get('description')}", 500
+
+        result = res.get("result")
+        if not result or "photo" not in result:
+            return "Telegram не вернул файл", 500
+
+        file_id = result["photo"][-1]["file_id"]
+
+        insert_photo(file.filename, file_id, current_user.id)
+
+    except Exception as e:
+        print("Upload error:", e)
+        return "Ошибка загрузки", 500
 
     return redirect("/")
 
