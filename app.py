@@ -168,13 +168,22 @@ def image():
             timeout=10
         ).json()
 
-        # 🔥 безопасно достаём
         file_path = res.get("result", {}).get("file_path")
 
         if not file_path:
-            return "Файл не найден в Telegram", 404
+            return "Файл не найден", 404
 
         file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+
+        # 🔥 определяем тип файла
+        if file_path.endswith(".png"):
+            content_type = "image/png"
+        elif file_path.endswith(".jpg") or file_path.endswith(".jpeg"):
+            content_type = "image/jpeg"
+        elif file_path.endswith(".webp"):
+            content_type = "image/webp"
+        else:
+            content_type = "application/octet-stream"
 
     except Exception as e:
         print("Telegram error:", e)
@@ -188,7 +197,7 @@ def image():
         except Exception as e:
             print("Stream error:", e)
 
-    return Response(generate(), content_type="image/jpeg")
+    return Response(generate(), content_type=content_type)
 
 @app.route("/upload", methods=["POST"])
 @login_required
