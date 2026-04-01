@@ -26,7 +26,5 @@ function closeViewer() {
     viewer.style.display = "none";
     full.src = "";
 }
-img.onerror = () => {
-    div.remove(); // удаляем битую картинку
-};
+
 document.addEventListener("DOMContentLoaded", loadImages);
