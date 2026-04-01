@@ -5,15 +5,24 @@ import sqlite3, os, requests
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super_secret_key_123")
 
+# 🔥 ВАЖНО: фиксы для мобильных (cookies)
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=True
+)
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = os.environ.get("CHANNEL_ID")
 
 if not BOT_TOKEN or not CHANNEL_ID:
-    raise ValueError("BOT_TOKEN и CHANNEL_ID должны быть заданы в environment variables")
+    raise ValueError("BOT_TOKEN и CHANNEL_ID должны быть заданы")
 
 # ===== LOGIN =====
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+# 🔥 редирект вместо Unauthorized
+login_manager.login_view = "login_page"
 
 users = {"admin": {"password": "1234"}}
 
@@ -83,12 +92,13 @@ def login_page():
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.form
-    username = data.get("username")
-    password = data.get("password")
+    username = request.form.get("username")
+    password = request.form.get("password")
+
     if username in users and users[username]["password"] == password:
         login_user(User(username))
         return redirect("/")
+
     return render_template("login.html", error="Неверный логин или пароль")
 
 @app.route("/logout")
@@ -100,21 +110,34 @@ def logout():
 @app.route("/images")
 @login_required
 def images():
-    photos = get_all_photos()
-    return jsonify([p["name"] for p in photos])
+    try:
+        photos = get_all_photos()
+        return jsonify([p["name"] for p in photos])
+    except Exception:
+        return jsonify([])
 
 @app.route("/image")
 @login_required
 def image():
     name = request.args.get("name")
     file_id = get_file_id(name)
+
     if not file_id:
         return "Фото не найдено", 404
+
     try:
-        res = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
-                           params={"file_id": file_id}, timeout=10).json()
-        file_path = res["result"]["file_path"]
+        res = requests.get(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
+            params={"file_id": file_id},
+            timeout=10
+        ).json()
+
+        file_path = res.get("result", {}).get("file_path")
+        if not file_path:
+            return "Ошибка Telegram API", 500
+
         file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+
     except Exception:
         return "Ошибка при получении файла", 500
 
@@ -125,25 +148,34 @@ def image():
                     yield chunk
         except Exception:
             return
+
     return Response(generate(), content_type="image/jpeg")
 
 @app.route("/upload", methods=["POST"])
 @login_required
 def upload():
-    file = request.files["file"]
+    file = request.files.get("file")
+
     if not file:
         return redirect("/")
+
     name = file.filename
 
     try:
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
         files = {"photo": file}
         data = {"chat_id": CHANNEL_ID}
+
         res = requests.post(url, data=data, files=files, timeout=15).json()
+
+        if not res.get("ok"):
+            return "Ошибка Telegram API", 500
+
         file_id = res["result"]["photo"][-1]["file_id"]
         insert_photo(name, file_id)
+
     except Exception:
-        return "Ошибка при загрузке на Telegram", 500
+        return "Ошибка при загрузке", 500
 
     return redirect("/")
 
