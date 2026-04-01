@@ -2,80 +2,100 @@ const gallery = document.getElementById("gallery");
 const viewer = document.getElementById("viewer");
 const full = document.getElementById("full");
 
-// 🔥 загрузка всех фото при старте
+let loadedImages = new Set(); // Чтобы не дублировать картинки
+
+// Функция подгрузки всех изображений
 async function loadImages() {
     try {
         const res = await fetch("/images");
         const images = await res.json();
 
-        images.forEach(name => addImageToGallery(name));
-    } catch (e) {
-        console.error("Ошибка загрузки изображений:", e);
+        images.forEach(name => {
+            if (loadedImages.has(name)) return; // Уже загружено
+            loadedImages.add(name);
+
+            const div = document.createElement("div");
+            div.className = "skeleton";
+            gallery.appendChild(div);
+
+            const img = document.createElement("img");
+            img.dataset.name = name;
+            img.onload = () => div.replaceWith(img);
+            img.onerror = () => {
+                div.className = "error";
+                div.textContent = "Ошибка загрузки";
+            };
+            img.src = `/image?name=${encodeURIComponent(name)}`;
+            img.onclick = () => {
+                full.src = img.src;
+                viewer.style.display = "flex";
+            }
+        });
+    } catch (err) {
+        console.error("Ошибка загрузки изображений:", err);
     }
 }
 
-// 🔥 добавление одной картинки (динамически)
-function addImageToGallery(name, prepend = true) {
-    const div = document.createElement("div");
-    div.className = "skeleton"; // skeleton эффект
-
-    const img = document.createElement("img");
-    img.dataset.name = name;
-
-    img.onload = () => div.replaceWith(img);
-    img.onerror = () => {
-        console.warn("Не удалось загрузить:", name);
-        div.remove();
-    };
-
-    img.src = `/image?name=${encodeURIComponent(name)}`;
-    img.onclick = () => {
-        full.src = img.src;
-        viewer.style.display = "flex";
-    };
-
-    if (prepend) {
-        gallery.prepend(div); // новые сверху
-    } else {
-        gallery.appendChild(div);
-    }
-}
-
-// 🔥 закрытие просмотрщика
+// Функция закрытия полноэкранного просмотра
 function closeViewer() {
     viewer.style.display = "none";
     full.src = "";
 }
 
-// 🔥 загрузка новых изображений после upload
-async function handleUpload(form) {
-    const formData = new FormData(form);
+// Подгрузка новых изображений после добавления
+async function uploadAndAdd(fileInput) {
+    if (!fileInput.files.length) return;
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
 
     try {
         const res = await fetch("/upload", {
             method: "POST",
             body: formData
         });
-        const data = await res.json();
 
-        if (data.status === "ok") {
-            addImageToGallery(data.name); // добавляем только новую картинку
-        } else {
-            alert("Ошибка загрузки: " + (data.error || "неизвестная ошибка"));
+        const data = await res.json();
+        if (data.status !== "ok") {
+            alert("Ошибка загрузки: " + (data.error || "неизвестная"));
+            return;
         }
-    } catch (e) {
-        console.error("Upload error:", e);
-        alert("Ошибка загрузки");
+
+        // Добавляем только что загруженное фото
+        const name = data.name;
+        if (!loadedImages.has(name)) {
+            loadedImages.add(name);
+
+            const div = document.createElement("div");
+            div.className = "skeleton";
+            gallery.appendChild(div);
+
+            const img = document.createElement("img");
+            img.dataset.name = name;
+            img.onload = () => div.replaceWith(img);
+            img.onerror = () => {
+                div.className = "error";
+                div.textContent = "Ошибка загрузки";
+            };
+            img.src = `/image?name=${encodeURIComponent(name)}`;
+            img.onclick = () => {
+                full.src = img.src;
+                viewer.style.display = "flex";
+            }
+        }
+
+    } catch (err) {
+        console.error("Ошибка загрузки файла:", err);
+        alert("Ошибка загрузки файла");
+    } finally {
+        fileInput.value = ""; // Очистка input
     }
 }
 
-// 🔥 событие формы загрузки
-const uploadForm = document.getElementById("uploadForm");
-if (uploadForm) {
-    uploadForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        handleUpload(uploadForm);
-    });
-}
+// Подключаем загрузку после загрузки DOM
+document.addEventListener("DOMContentLoaded", () => {
+    loadImages();
 
-document.addEventListener("DOMContentLoaded", loadImages);
+    const uploadInput = document.querySelector("input[name=file]");
+    uploadInput.addEventListener("change", () => uploadAndAdd(uploadInput));
+});
