@@ -1,0 +1,60 @@
+body {
+    margin: 0;
+    font-family: "Arial", sans-serif;
+    background: #0f172a;
+    color: #fff;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background: #020617;
+    border-bottom: 1px solid #1e293b;
+}
+
+.header h1 { font-size: 20px; }
+.header a { color: #38bdf8; text-decoration: none; }
+
+.upload-box { text-align: center; padding: 20px; }
+.upload-box input { margin-bottom: 10px; }
+.upload-box button { background: #38bdf8; border: none; padding: 10px 20px; color: black; border-radius: 8px; cursor: pointer; }
+
+.gallery {
+    column-count: 4;
+    column-gap: 10px;
+    padding: 10px;
+}
+.card {
+    break-inside: avoid;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+}
+.card img { width: 100%; transition: 0.3s; }
+.card img:hover { transform: scale(1.05); }
+
+.viewer {
+    position: fixed;
+    display: none;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.9);
+    justify-content: center;
+    align-items: center;
+}
+.viewer img { max-width: 90%; max-height: 90%; }
+
+.login-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 30px;
+    background: #1e293b;
+    border-radius: 12px;
+    text-align: center;
+}
+.login-container input { width: 80%; padding: 10px; margin: 8px 0; border-radius: 6px; border: none; }
+.login-container button { padding: 10px 20px; border-radius: 6px; border: none; background: #38bdf8; color: black; cursor: pointer; }
+.error { color: #f87171; }
+@media (max-width: 900px) { .gallery { column-count: 2; } }
